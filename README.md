@@ -1,5 +1,7 @@
 # Wayback Machine Downloader
 
+This fork prints the page contents to stdout instead of saving them.
+
 [![Gem Version](https://badge.fury.io/rb/wayback_machine_downloader.svg)](https://rubygems.org/gems/wayback_machine_downloader/)
 [![Build Status](https://travis-ci.org/hartator/wayback-machine-downloader.svg?branch=master)](https://travis-ci.org/hartator/wayback-machine-downloader)
 

@@ -217,30 +217,7 @@ class WaybackMachineDownloader
     threads.each(&:join)
     end_time = Time.now
     puts
-    puts "Download completed in #{(end_time - start_time).round(2)}s, saved in #{backup_path} (#{file_list_by_timestamp.size} files)"
-  end
-
-  def structure_dir_path dir_path
-    begin
-      FileUtils::mkdir_p dir_path unless File.exist? dir_path
-    rescue Errno::EEXIST => e
-      error_to_string = e.to_s
-      puts "# #{error_to_string}"
-      if error_to_string.include? "File exists @ dir_s_mkdir - "
-        file_already_existing = error_to_string.split("File exists @ dir_s_mkdir - ")[-1]
-      elsif error_to_string.include? "File exists - "
-        file_already_existing = error_to_string.split("File exists - ")[-1]
-      else
-        raise "Unhandled directory restructure error # #{error_to_string}"
-      end
-      file_already_existing_temporary = file_already_existing + '.temp'
-      file_already_existing_permanent = file_already_existing + '/index.html'
-      FileUtils::mv file_already_existing, file_already_existing_temporary
-      FileUtils::mkdir_p file_already_existing
-      FileUtils::mv file_already_existing_temporary, file_already_existing_permanent
-      puts "#{file_already_existing} -> #{file_already_existing_permanent}"
-      structure_dir_path dir_path
-    end
+    puts "Download completed in #{(end_time - start_time).round(2)}s"
   end
 
   def download_file file_remote_info
@@ -263,41 +240,18 @@ class WaybackMachineDownloader
       dir_path = dir_path.gsub(/[:*?&=<>\\|]/) {|s| '%' + s.ord.to_s(16) }
       file_path = file_path.gsub(/[:*?&=<>\\|]/) {|s| '%' + s.ord.to_s(16) }
     end
-    unless File.exist? file_path
-      begin
-        structure_dir_path dir_path
-        open(file_path, "wb") do |file|
-          begin
-            URI.open("https://web.archive.org/web/#{file_timestamp}id_/#{file_url}", "Accept-Encoding" => "plain") do |uri|
-              file.write(uri.read)
-            end
-          rescue OpenURI::HTTPError => e
-            puts "#{file_url} # #{e}"
-            if @all
-              file.write(e.io.read)
-              puts "#{file_path} saved anyway."
-            end
-          rescue StandardError => e
-            puts "#{file_url} # #{e}"
-          end
-        end
-      rescue StandardError => e
-        puts "#{file_url} # #{e}"
-      ensure
-        if not @all and File.exist?(file_path) and File.size(file_path) == 0
-          File.delete(file_path)
-          puts "#{file_path} was empty and was removed."
-        end
+    begin
+      URI.open("https://web.archive.org/web/#{file_timestamp}id_/#{file_url}", "Accept-Encoding" => "plain") do |uri|
+        puts "#{uri.read}"
       end
-      semaphore.synchronize do
-        @processed_file_count += 1
-        puts "#{file_url} -> #{file_path} (#{@processed_file_count}/#{file_list_by_timestamp.size})"
+    rescue OpenURI::HTTPError => e
+      puts "#{file_url} # #{e}"
+      if @all
+        puts "#{e.io.read}"
+        puts "#{file_path} saved anyway."
       end
-    else
-      semaphore.synchronize do
-        @processed_file_count += 1
-        puts "#{file_url} # #{file_path} already exists. (#{@processed_file_count}/#{file_list_by_timestamp.size})"
-      end
+    rescue StandardError => e
+      puts "#{file_url} # #{e}"
     end
   end
 
